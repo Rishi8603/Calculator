@@ -1,13 +1,22 @@
 let equation = "";
 
+// Cache DOM elements to avoid repetitive queries
+const display1 = document.querySelector(".display1");
+const display2 = document.querySelector(".display2");
+
 // Function to update the main display (the equation)
 function updateDisplay(value) {
-  document.querySelector(".display1").textContent = value;
+  display1.textContent = value;
 }
 
 // Function to update the secondary display (the live result)
 function updateDisplayRes(value) {
-  document.querySelector(".display2").textContent = value;
+  display2.textContent = value;
+}
+
+// Helper function to check if a character is an operator
+function isOperator(char) {
+  return ['+', '−', '×', '÷'].includes(char);
 }
 
 // --- Core Function for Live Calculation (with BODMAS logic) ---
@@ -17,25 +26,28 @@ function calculateLive() {
     return;
   }
 
-  // Sanitize the equation for evaluation, converting display symbols to operators.
   let sanitizedEquation = equation
     .toString()
     .replace(/×/g, '*')
     .replace(/÷/g, '/')
     .replace(/−/g, '-');
 
-  // Do not try to evaluate if the equation ends with an operator (except for negative signs that are part of numbers)
   const lastChar = sanitizedEquation.trim().slice(-1);
-  if (['*', '/', '+'].includes(lastChar)) {
+
+  // Do not try to evaluate if the equation ends with an operator (except for a negative sign that is part of a number)
+  // This check is crucial for preventing unnecessary eval calls and flicker.
+  if (isOperator(lastChar) && lastChar !== '-') {
     updateDisplayRes("");
     return;
   }
 
-  // Special check for minus sign - only skip if it's clearly an incomplete operation
+  // Special check for minus sign: if it's a standalone operator at the end, don't evaluate
   if (lastChar === '-') {
-    const beforeMinus = sanitizedEquation.trim().slice(-2, -1);
-    // If minus follows a number or closing parenthesis, it's incomplete
-    if (!isNaN(parseInt(beforeMinus)) || beforeMinus === ')') {
+    const secondLastChar = sanitizedEquation.trim().slice(-2, -1);
+    // If the minus sign is preceded by an operator or an opening parenthesis,
+    // it's likely a negative number indicator, not an incomplete subtraction.
+    // Otherwise, if it's preceded by a number or closing parenthesis, it's an incomplete subtraction.
+    if (!isNaN(parseInt(secondLastChar)) || secondLastChar === ')') {
       updateDisplayRes("");
       return;
     }
@@ -53,7 +65,7 @@ function calculateLive() {
     updateDisplayRes(result);
 
   } catch (error) {
-    // If eval() fails (e.g., mismatched parentheses), clear the result display.
+    // If eval() fails (e.g., mismatched parentheses, incomplete expression), clear the result display.
     updateDisplayRes("");
   }
 }
@@ -66,7 +78,7 @@ document.querySelectorAll(".button.number-btn").forEach(button => {
     let digit = event.target.textContent;
     equation += digit;
     updateDisplay(equation);
-    calculateLive();
+    calculateLive(); // Calculate live result after every number input
   });
 });
 
@@ -77,69 +89,50 @@ document.querySelectorAll(".button.operator-btn").forEach(button => {
     let lastChar = equation.slice(-1);
 
     if (oper === "=") {
-      let result = document.querySelector(".display2").textContent;
+      let result = display2.textContent; // Use cached display2
       if (result && result !== "Cannot divide by zero") {
         equation = result;
         updateDisplay(equation);
-        updateDisplayRes("");
+        updateDisplayRes(""); // Clear live result after final calculation
       }
     } else if (oper === '(') {
-      // --- Opening Parenthesis Logic ---
-      // If the last character is a number or a closing parenthesis,
-      // insert a multiplication sign for implicit multiplication (e.g., 5(2) becomes 5*(2)).
+      // If the last character is a number or a closing parenthesis, insert a multiplication sign
       if (!isNaN(parseInt(lastChar)) || lastChar === ')') {
         equation += '×';
       }
       equation += '(';
       updateDisplay(equation);
-      updateDisplayRes(""); // Clear result as equation is now incomplete.
+      updateDisplayRes(""); // Clear result as equation is incomplete with an open parenthesis
 
     } else if (oper === ')') {
-      // --- Closing Parenthesis Logic ---
       const openParenCount = (equation.match(/\(/g) || []).length;
       const closeParenCount = (equation.match(/\)/g) || []).length;
-      const isLastCharOperator = ['+', '×', '÷', '('].includes(lastChar);
 
-      // Only add ')' if there's an open parenthesis to close and the last char isn't an operator
-      // Allow closing after minus sign (for negative numbers)
-      if (openParenCount > closeParenCount && !isLastCharOperator && equation !== "") {
+      // Only add ')' if there's an open parenthesis to close and the last char isn't an operator (except for minus as part of a negative number)
+      // and ensure equation is not empty
+      if (openParenCount > closeParenCount && equation !== "" && !['+', '×', '÷'].includes(lastChar)) {
         equation += ')';
         updateDisplay(equation);
-        calculateLive(); // Update the live result.
+        calculateLive(); // Update the live result after closing parenthesis
       }
     } else {
       // --- Standard Operator Logic (+, −, ×, ÷) ---
-      if (oper === '−') {
-        // Special handling for minus sign - can be used as negative sign
-        if (equation === "") {
-          // Allow minus at the beginning (negative number)
+      // Allow minus sign at the beginning or after other operators for negative numbers
+      if (oper === '−' && (equation === "" || ['+', '×', '÷', '('].includes(lastChar))) {
+        equation += oper;
+        updateDisplay(equation);
+        updateDisplayRes(""); // Clear live result as expression is incomplete
+      }
+      // For other operators or subtraction, prevent consecutive operators
+      else if (equation !== "" && !isOperator(lastChar) && (lastChar !== '.')) {
+        // If the last character is an operator, replace it with the new operator
+        if (isOperator(lastChar)) {
+          equation = equation.slice(0, -1) + oper;
+        } else {
           equation += oper;
-          updateDisplay(equation);
-          updateDisplayRes("");
-        } else if (['+', '×', '÷', '('].includes(lastChar)) {
-          // Allow minus after these operators (for negative numbers)
-          equation += oper;
-          updateDisplay(equation);
-          updateDisplayRes("");
-        } else if (!isNaN(parseInt(lastChar)) || lastChar === '.' || lastChar === ')') {
-          // This is subtraction - only allow if last char isn't already an operator
-          if (!['+', '−', '×', '÷'].includes(lastChar)) {
-            equation += oper;
-            updateDisplay(equation);
-            updateDisplayRes("");
-          }
         }
-        // Don't allow consecutive minus signs or minus after minus
-      } else {
-        // For +, ×, ÷ operators - prevent consecutive operators
-        const isLastCharValid = !isNaN(parseInt(lastChar)) || lastChar === '.' || lastChar === ')';
-        const isLastCharOperator = ['+', '−', '×', '÷'].includes(lastChar);
-
-        if (equation !== "" && isLastCharValid && !isLastCharOperator) {
-          equation += oper;
-          updateDisplay(equation);
-          updateDisplayRes(""); // Clear result as equation is now incomplete.
-        }
+        updateDisplay(equation);
+        updateDisplayRes(""); // Clear result as equation is now incomplete
       }
     }
   });
@@ -156,5 +149,5 @@ document.querySelector(".button.clear-btn").addEventListener("click", function (
 document.querySelector(".button.delete-btn").addEventListener("click", function () {
   equation = equation.slice(0, -1);
   updateDisplay(equation);
-  calculateLive();
+  calculateLive(); // Recalculate live result after deletion
 });

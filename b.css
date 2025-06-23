@@ -5,6 +5,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  /* Ensure body takes full viewport height */
   margin: 0;
 }
 
@@ -29,13 +30,15 @@ body {
   font-weight: bold;
   color: #333;
 }
-.display1{
-  flex:1;
+
+.display1 {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: end;
 }
-.display2{
+
+.display2 {
   height: 30px;
   font-size: 20px;
   border-radius: 8px;
@@ -82,13 +85,13 @@ body {
 }
 
 .operator-btn {
-  background: linear-gradient(145deg, #48dbb6,#10a37f);
+  background: linear-gradient(145deg, #48dbb6, #10a37f);
   color: #333;
 }
 
 .clear-btn {
-  background: linear-gradient(145deg,#eb5c5c,
-  #ef4444);
+  background: linear-gradient(145deg, #eb5c5c,
+      #ef4444);
   color: #333;
   flex: 1;
 }
@@ -100,6 +103,7 @@ body {
   font-size: 25px;
   padding-bottom: 5px;
 }
+
 /* Responsive design */
 @media (max-width: 380px) {
   .calculator {
