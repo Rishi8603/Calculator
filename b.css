@@ -100,13 +100,19 @@ body {
   font-size: 25px;
   padding-bottom: 5px;
 }
+/* Responsive design */
+@media (max-width: 380px) {
+  .calculator {
+    width: 280px;
+    padding: 20px;
+  }
 
-/* .function-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+  .button {
+    height: 50px;
+    font-size: 18px;
+  }
+
+  .display1 {
+    font-size: 24px;
+  }
 }
-
-.function-row,.button-row{
-  user-select: none;
-} */
